@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>DevOps ToDo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1>DevOps ToDo</h1>
+      <p class="header-subtitle">
+        Backend: <code>todo.allopswithahmad.com</code> · API: <code>/api/tasks</code>
+      </p>
+    </header>
+
+    <main class="main">
+      <!-- Add task -->
+      <section class="card">
+        <h2>Add a new task</h2>
+        <form id="new-task-form">
+          <input
+            type="text"
+            id="new-task-input"
+            placeholder="Write something to do…"
+            autocomplete="off"
+            required
+          />
+          <button type="submit">Add</button>
+        </form>
+        <p id="form-error" class="error hidden"></p>
+      </section>
+
+      <!-- Stats -->
+      <section class="card card--stats">
+        <div class="stat">
+          <span class="stat-label">Total</span>
+          <span class="stat-value" id="stat-total">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Open</span>
+          <span class="stat-value" id="stat-open">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Done</span>
+          <span class="stat-value" id="stat-done">0</span>
+        </div>
+      </section>
+
+      <!-- Tasks list -->
+      <section class="card">
+        <div class="card-header-row">
+          <h2>Your tasks</h2>
+          <button id="reload-btn" class="secondary">↻ Refresh</button>
+        </div>
+
+        <div id="loading" class="loading">Loading tasks…</div>
+        <ul id="tasks-list" class="tasks-list"></ul>
+        <p id="empty-state" class="empty hidden">No tasks yet. Add your first one 👇</p>
+        <p id="list-error" class="error hidden"></p>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
