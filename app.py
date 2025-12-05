@@ -36,21 +36,40 @@ def health():
 def tasks():
     if request.method == "POST":
         data = request.get_json() or {}
-        description = data.get("description", "").strip()
-        if not description:
-            return jsonify({"error": "Description is required"}), 400
+        title = (data.get("title") or "").strip()
 
-        task = Task(description=description, done=False)
+        if not title:
+            return jsonify({"error": "Title is required"}), 400
+
+        task = Task(description=title, done=False)
         db.session.add(task)
         db.session.commit()
-        return jsonify({"id": task.id, "description": task.description, "done": task.done}), 201
 
-    # GET
+        return (
+            jsonify(
+                {
+                    "id": task.id,
+                    "title": title,
+                    "is_done": task.done,
+                }
+            ),
+            201,
+        )
+
     all_tasks = Task.query.order_by(Task.id.desc()).all()
-    return jsonify([
-        {"id": t.id, "description": t.description, "done": t.done}
-        for t in all_tasks
-    ])
+    return (
+        jsonify(
+            [
+                {
+                    "id": t.id,
+                    "title": t.description,  # أو t.title لو عندك حقل اسمه title
+                    "is_done": t.done,
+                }
+                for t in all_tasks
+            ]
+        ),
+        200,
+    )
 
 
 @app.route("/api/tasks/<int:task_id>", methods=["PATCH", "DELETE"])
@@ -62,7 +81,12 @@ def task_detail(task_id):
         if "done" in data:
             task.done = bool(data["done"])
         db.session.commit()
-        return jsonify({"id": task.id, "description": task.description, "done": task.done})
+        return jsonify({
+            "id": task.id,
+            "description": task.description,
+            "title": task.description,
+            "done": task.done,
+        })
 
     # DELETE
     db.session.delete(task)
