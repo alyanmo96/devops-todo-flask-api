@@ -5,7 +5,7 @@
 // ======================
 
 // Base URL for the API (your backend ELB / DNS)
-const API_BASE_URL = "http://todo.allopswithahmad.com";
+const API_BASE_URL = "http://a62766389bd3f410ab789de92fa009e9-678903922.us-west-2.elb.amazonaws.com";
 
 // Path of the tasks endpoint
 const TASKS_ENDPOINT = "/api/tasks";
@@ -18,7 +18,10 @@ const TASKS_URL = `${API_BASE_URL}${TASKS_ENDPOINT}`;
 // ======================
 
 const backendSpan = document.getElementById("backend-host");
-const apiSpan = document.getElementById("api-endpoint");
+const apiSpan = document.getElementById("api-path");
+
+if (backendSpan) backendSpan.textContent = new URL(API_BASE_URL || window.location.origin).host;
+if (apiSpan) apiSpan.textContent = TASKS_ENDPOINT;
 
 const input = document.getElementById("new-task-input");
 const addButton = document.getElementById("add-task-btn");
