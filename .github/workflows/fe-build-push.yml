@@ -1,8 +1,14 @@
 name: Build & Push FE Docker Image
 
+# fe-build-push.yml
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - "static/**"
+      - "templates/**"
+      - "Dockerfile" 
+      - ".github/workflows/fe-build-push.yml"
 
 jobs:
   build:
