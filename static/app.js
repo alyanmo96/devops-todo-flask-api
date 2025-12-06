@@ -1,24 +1,21 @@
 // static/app.js
 
-// Use the same origin as the frontend (works locally & on the domain)
-//const API_BASE_URL = "http://todo.allopswithahmad.com";           // "" means "current origin"
-//const TASKS_ENDPOINT = `http://${BACKEND_HOST}/api/tasks`;
+// Base URL for the API (ELB / DNS of the backend)
+const API_BASE_URL = "http://todo.allopswithahmad.com";
 
+// Only the path of the tasks endpoint
+const TASKS_ENDPOINT = "/api/tasks";
 
-// *************** CONFIG ***************
-
-const BACKEND_HOST = "todo.allopswithahmad.com";
-
-const API_BASE_URL = `http://${BACKEND_HOST}`;
-
-const TASKS_ENDPOINT = `${API_BASE_URL}/api/tasks`;
-
-// *************** END CONFIG ***************
-
-
-// Just for display at the top of the page
+// Show them in the UI header
 const backendSpan = document.getElementById("backend-host");
-const apiSpan = document.getElementById("api-path");
+const apiSpan = document.getElementById("api-endpoint");
+
+// remove http:// or https:// when showing
+backendSpan.textContent = API_BASE_URL.replace(/^https?:\/\//, "");
+apiSpan.textContent = TASKS_ENDPOINT;
+
+
+
 if (backendSpan) backendSpan.textContent = window.location.host;
 if (apiSpan) apiSpan.textContent = TASKS_ENDPOINT;
 
