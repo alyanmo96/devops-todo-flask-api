@@ -3,12 +3,6 @@ name: Build & Push FE Docker Image
 on:
   push:
     branches: [ "main" ]
-    paths:
-      - "static/**"
-      - "index.html"
-      - "app.js"
-      - "styles.css"
-      - "Dockerfile"
 
 jobs:
   build:
@@ -25,9 +19,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build FE Docker image
-        run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/devops-todo-frontend:latest .
+        run: docker build -t alyanmo/devops-fe:latest ./static
 
       - name: Push FE Docker image
-        run: |
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/devops-todo-frontend:latest
+        run: docker push alyanmo/devops-fe:latest
