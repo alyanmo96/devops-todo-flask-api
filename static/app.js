@@ -1,161 +1,234 @@
 // static/app.js
 
-// Base URL for the API (ELB / DNS of the backend)
+// ======================
+// API configuration
+// ======================
+
+// Base URL for the API (your backend ELB / DNS)
 const API_BASE_URL = "http://todo.allopswithahmad.com";
 
-// Only the path of the tasks endpoint
+// Path of the tasks endpoint
 const TASKS_ENDPOINT = "/api/tasks";
 
-// Show them in the UI header
+// Full URL for tasks
+const TASKS_URL = `${API_BASE_URL}${TASKS_ENDPOINT}`;
+
+// ======================
+// DOM elements
+// ======================
+
 const backendSpan = document.getElementById("backend-host");
 const apiSpan = document.getElementById("api-endpoint");
 
-// remove http:// or https:// when showing
-backendSpan.textContent = API_BASE_URL.replace(/^https?:\/\//, "");
-apiSpan.textContent = TASKS_ENDPOINT;
-
-
-
-if (backendSpan) backendSpan.textContent = window.location.host;
-if (apiSpan) apiSpan.textContent = TASKS_ENDPOINT;
-
 const input = document.getElementById("new-task-input");
-const addButton = document.getElementById("add-btn");
+const addButton = document.getElementById("add-task-btn");
 const refreshButton = document.getElementById("refresh-btn");
-const tasksContainer = document.getElementById("tasks-container");
-const errorBox = document.getElementById("error-box");
-const totalSpan = document.getElementById("total-count");
-const openSpan = document.getElementById("open-count");
-const doneSpan = document.getElementById("done-count");
 
-function showError(message) {
-  if (!errorBox) return;
-  errorBox.textContent = message;
-  errorBox.style.display = "block";
+const tasksList = document.getElementById("tasks-list");
+const errorBox = document.getElementById("error-message");
+
+const totalCountSpan = document.getElementById("total-count");
+const openCountSpan = document.getElementById("open-count");
+const doneCountSpan = document.getElementById("done-count");
+
+// Show backend + API path in header (without http://)
+if (backendSpan) {
+  backendSpan.textContent = API_BASE_URL.replace(/^https?:\/\//, "");
+}
+if (apiSpan) {
+  apiSpan.textContent = TASKS_ENDPOINT;
 }
 
-function clearError() {
+// ======================
+// Helpers
+// ======================
+
+function showError(msg) {
+  console.error(msg);
   if (!errorBox) return;
-  errorBox.textContent = "";
-  errorBox.style.display = "none";
+  errorBox.textContent = msg;
+  errorBox.style.opacity = "1";
+
+  // hide after a few seconds
+  setTimeout(() => {
+    errorBox.style.opacity = "0";
+  }, 4000);
 }
 
+function clearTasksList() {
+  if (!tasksList) return;
+  tasksList.innerHTML = "";
+}
+
+function updateCounters(tasks) {
+  if (!Array.isArray(tasks)) return;
+
+  const total = tasks.length;
+  const done = tasks.filter((t) => t.done || t.is_done).length;
+  const open = total - done;
+
+  if (totalCountSpan) totalCountSpan.textContent = total;
+  if (openCountSpan) openCountSpan.textContent = open;
+  if (doneCountSpan) doneCountSpan.textContent = done;
+}
+
+// Render a single task row
+function renderTask(task) {
+  if (!tasksList) return;
+  const li = document.createElement("li");
+  li.className = "task-item";
+
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.checked = !!(task.done || task.is_done);
+  checkbox.className = "task-checkbox";
+
+  const titleSpan = document.createElement("span");
+  titleSpan.className = "task-title";
+  titleSpan.textContent = task.title || task.description || "";
+
+  const deleteBtn = document.createElement("button");
+  deleteBtn.className = "task-delete-btn";
+  deleteBtn.textContent = "✕";
+
+  // toggle done
+  checkbox.addEventListener("change", () => {
+    toggleTask(task.id);
+  });
+
+  // delete
+  deleteBtn.addEventListener("click", () => {
+    deleteTask(task.id);
+  });
+
+  li.appendChild(checkbox);
+  li.appendChild(titleSpan);
+  li.appendChild(deleteBtn);
+
+  tasksList.appendChild(li);
+}
+
+// ======================
+// API calls
+// ======================
+
+// GET /api/tasks
 async function fetchTasks() {
-  clearError();
-  tasksContainer.innerHTML = "<p class='muted'>Loading...</p>";
+  if (!tasksList) return;
+
+  clearTasksList();
+
+  const loadingLi = document.createElement("li");
+  loadingLi.textContent = "Loading tasks…";
+  loadingLi.className = "task-loading";
+  tasksList.appendChild(loadingLi);
 
   try {
-    const res = await fetch(`${API_BASE_URL}${TASKS_ENDPOINT}`);
+    const res = await fetch(TASKS_URL, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json",
+      },
+    });
+
     if (!res.ok) {
-      throw new Error(res.statusText || `HTTP ${res.status}`);
+      throw new Error(`GET ${TASKS_URL} failed: ${res.status}`);
     }
-    const tasks = await res.json();
-    renderTasks(tasks);
+
+    const data = await res.json();
+
+    clearTasksList();
+
+    if (!data || data.length === 0) {
+      const emptyLi = document.createElement("li");
+      emptyLi.textContent = "No tasks yet. Add your first one 👇";
+      emptyLi.className = "task-empty";
+      tasksList.appendChild(emptyLi);
+    } else {
+      data.forEach(renderTask);
+    }
+
+    updateCounters(data);
   } catch (err) {
-    tasksContainer.innerHTML = "";
+    clearTasksList();
     showError(`Failed to load tasks: ${err.message}`);
   }
 }
 
-function renderTasks(tasks) {
-  tasksContainer.innerHTML = "";
-
-  if (!tasks.length) {
-    tasksContainer.innerHTML = "<p class='muted'>No tasks yet. Add something!</p>";
-  }
-
-  let total = tasks.length;
-  let done = tasks.filter(t => t.done).length;
-  let open = total - done;
-
-  totalSpan.textContent = total;
-  openSpan.textContent = open;
-  doneSpan.textContent = done;
-
-  for (const task of tasks) {
-    const row = document.createElement("div");
-    row.className = "task-row" + (task.done ? " task-row--done" : "");
-
-    const text = document.createElement("span");
-    text.textContent = task.description;
-
-    const actions = document.createElement("div");
-    actions.className = "task-actions";
-
-    const toggleBtn = document.createElement("button");
-    toggleBtn.className = "btn btn-small" + (task.done ? " btn-secondary" : " btn-primary");
-    toggleBtn.textContent = task.done ? "Re-open" : "Done";
-    toggleBtn.onclick = () => toggleTask(task);
-
-    const deleteBtn = document.createElement("button");
-    deleteBtn.className = "btn btn-small btn-danger";
-    deleteBtn.textContent = "Delete";
-    deleteBtn.onclick = () => deleteTask(task);
-
-    actions.appendChild(toggleBtn);
-    actions.appendChild(deleteBtn);
-
-    row.appendChild(text);
-    row.appendChild(actions);
-    tasksContainer.appendChild(row);
-  }
-}
-
+// POST /api/tasks
 async function addTask() {
-  clearError();
-  const description = (input.value || "").trim();
-  if (!description) return;
+  if (!input) return;
+  const title = input.value.trim();
+  if (!title) return;
 
-  addButton.disabled = true;
+  addButton && (addButton.disabled = true);
+
   try {
-    const res = await fetch(`${API_BASE_URL}${TASKS_ENDPOINT}`, {
+    const res = await fetch(TASKS_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ description }),
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify({ title }),
     });
+
     if (!res.ok) {
-      throw new Error(res.statusText || `HTTP ${res.status}`);
+      throw new Error(`POST ${TASKS_URL} failed: ${res.status}`);
     }
+
     input.value = "";
     await fetchTasks();
   } catch (err) {
     showError(`Failed to add task: ${err.message}`);
   } finally {
-    addButton.disabled = false;
+    addButton && (addButton.disabled = false);
   }
 }
 
-async function toggleTask(task) {
-  clearError();
+// PATCH /api/tasks/:id  (toggle done)
+async function toggleTask(id) {
   try {
-    const res = await fetch(`${API_BASE_URL}${TASKS_ENDPOINT}/${task.id}`, {
+    const res = await fetch(`${TASKS_URL}/${id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ done: !task.done }),
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify({ toggle: true }),
     });
-    if (!res.ok) throw new Error(res.statusText || `HTTP ${res.status}`);
+
+    if (!res.ok) {
+      throw new Error(`PATCH ${TASKS_URL}/${id} failed: ${res.status}`);
+    }
+
     await fetchTasks();
   } catch (err) {
     showError(`Failed to update task: ${err.message}`);
   }
 }
 
-async function deleteTask(task) {
-  clearError();
+// DELETE /api/tasks/:id
+async function deleteTask(id) {
   try {
-    const res = await fetch(`${API_BASE_URL}${TASKS_ENDPOINT}/${task.id}`, {
+    const res = await fetch(`${TASKS_URL}/${id}`, {
       method: "DELETE",
     });
-    if (!res.ok && res.status !== 204) {
-      throw new Error(res.statusText || `HTTP ${res.status}`);
+
+    if (!res.ok) {
+      throw new Error(`DELETE ${TASKS_URL}/${id} failed: ${res.status}`);
     }
+
     await fetchTasks();
   } catch (err) {
     showError(`Failed to delete task: ${err.message}`);
   }
 }
 
+// ======================
 // Wire up events
+// ======================
+
 if (addButton) addButton.addEventListener("click", addTask);
 if (refreshButton) refreshButton.addEventListener("click", fetchTasks);
 if (input) {
