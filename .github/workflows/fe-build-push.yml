@@ -26,8 +26,8 @@ jobs:
 
       - name: Build FE Docker image
         run: |
-          docker build -t alyanmo/devops-fe:latest .
+          docker build -t alyanmo/devops-todo-frontend:latest .
 
       - name: Push FE Docker image
         run: |
-          docker push alyanmo/devops-fe:latest
+          docker push alyanmo/devops-todo-frontend:latest
