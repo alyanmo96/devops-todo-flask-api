@@ -62,7 +62,7 @@ def tasks():
             [
                 {
                     "id": t.id,
-                    "title": t.description,  # أو t.title لو عندك حقل اسمه title
+                    "title": t.description,
                     "is_done": t.done,
                 }
                 for t in all_tasks

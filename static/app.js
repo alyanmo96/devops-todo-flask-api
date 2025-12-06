@@ -1,7 +1,7 @@
 // static/app.js
 
 // Use the same origin as the frontend (works locally & on the domain)
-const API_BASE_URL = "";           // "" means "current origin"
+const API_BASE_URL = "http://todo.allopswithahmad.com";           // "" means "current origin"
 const TASKS_ENDPOINT = "/api/tasks";
 
 // Just for display at the top of the page
