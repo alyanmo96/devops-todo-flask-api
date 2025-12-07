@@ -1,10 +1,12 @@
 from flask import Flask, jsonify, request, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from pathlib import Path
+from flask_cors import CORS
 
 BASE_DIR = Path(__file__).resolve().parent
 
 app = Flask(__name__, static_folder="static", static_url_path="/static")
+CORS(app)
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{BASE_DIR / 'tasks.db'}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
