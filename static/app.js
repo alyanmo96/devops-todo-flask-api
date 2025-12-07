@@ -1,7 +1,8 @@
 // static/app.js
 
-// URL of the backend (your todo-service LoadBalancer / domain)
-const API_BASE_URL = "http://todo.allopswithahmad.com";   // or use the ELB URL directly
+//const API_BASE_URL = "http://todo.allopswithahmad.com";
+const API_BASE_URL =
+  "http://a62766389bd3f410ab789de92fa009e9-678903922.us-west-2.elb.amazonaws.com";
 const TASKS_ENDPOINT = "/api/tasks";
 
 // ----- Header info -----
@@ -69,7 +70,8 @@ function renderTasks(tasks) {
   }
 
   const total = tasks.length;
-  const done = tasks.filter((t) => t.done).length;
+  // Backend uses "is_done" instead of "done"
+  const done = tasks.filter((t) => t.is_done).length;
   const open = total - done;
 
   if (totalSpan) totalSpan.textContent = total;
@@ -78,18 +80,20 @@ function renderTasks(tasks) {
 
   for (const task of tasks) {
     const row = document.createElement("div");
-    row.className = "task-row" + (task.done ? " task-row--done" : "");
+    row.className =
+      "task-row" + (task.is_done ? " task-row--done" : "");
 
     const text = document.createElement("span");
-    text.textContent = task.description;
+    // Backend returns "title" instead of "description"
+    text.textContent = task.title || "(no title)";
 
     const actions = document.createElement("div");
     actions.className = "task-actions";
 
     const toggleBtn = document.createElement("button");
     toggleBtn.className =
-      "btn btn-small" + (task.done ? " btn-secondary" : " btn-primary");
-    toggleBtn.textContent = task.done ? "Re-open" : "Done";
+      "btn btn-small" + (task.is_done ? " btn-secondary" : " btn-primary");
+    toggleBtn.textContent = task.is_done ? "Re-open" : "Done";
     toggleBtn.onclick = () => toggleTask(task);
 
     const deleteBtn = document.createElement("button");
@@ -108,7 +112,7 @@ function renderTasks(tasks) {
 
 async function addTask() {
   clearError();
-  const description = (input && input.value) ? input.value.trim() : "";
+  const description = input && input.value ? input.value.trim() : "";
   if (!description) return;
 
   if (addButton) addButton.disabled = true;
@@ -117,7 +121,8 @@ async function addTask() {
     const res = await fetch(`${API_BASE_URL}${TASKS_ENDPOINT}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ description }),
+      // Backend expects "title" (and uses "is_done" field in response)
+      body: JSON.stringify({ title: description, is_done: false }),
     });
     if (!res.ok) {
       throw new Error(res.statusText || `HTTP ${res.status}`);
@@ -137,7 +142,8 @@ async function toggleTask(task) {
     const res = await fetch(`${API_BASE_URL}${TASKS_ENDPOINT}/${task.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ done: !task.done }),
+      // Backend uses "is_done" instead of "done"
+      body: JSON.stringify({ is_done: !task.is_done }),
     });
     if (!res.ok) {
       throw new Error(res.statusText || `HTTP ${res.status}`);
