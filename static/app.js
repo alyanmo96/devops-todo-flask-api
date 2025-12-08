@@ -1,8 +1,6 @@
 // static/app.js
 
-//const API_BASE_URL = "http://todo.allopswithahmad.com";
-const API_BASE_URL =
-  "http://a62766389bd3f410ab789de92fa009e9-678903922.us-west-2.elb.amazonaws.com";
+const API_BASE_URL = "";
 const TASKS_ENDPOINT = "/api/tasks";
 
 // ----- Header info -----
