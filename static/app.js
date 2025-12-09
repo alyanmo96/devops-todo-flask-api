@@ -1,180 +1,187 @@
-// static/app.js
-
+// ========= CONFIG =========
 const API_BASE_URL = "";
 const TASKS_ENDPOINT = "/api/tasks";
 
-// ----- Header info -----
-const backendSpan = document.getElementById("backend-host");
-const apiSpan = document.getElementById("api-path");
 
-if (backendSpan) {
-  // show only host, without http://
-  backendSpan.textContent = API_BASE_URL.replace(/^https?:\/\//, "");
-}
-if (apiSpan) {
-  apiSpan.textContent = TASKS_ENDPOINT;
-}
+const newTaskForm   = document.querySelector("#new-task-form");
+const newTaskInput  = document.querySelector("#new-task-input");
+const formError     = document.querySelector("#form-error");
 
-// ----- DOM elements -----
-const input = document.getElementById("new-task-input");
-const addButton = document.getElementById("add-btn");
-const refreshButton = document.getElementById("refresh-btn");
-const tasksContainer = document.getElementById("tasks-container");
-const errorBox = document.getElementById("error-box");
-const totalSpan = document.getElementById("total-count");
-const openSpan = document.getElementById("open-count");
-const doneSpan = document.getElementById("done-count");
+const totalSpan     = document.querySelector("#stat-total");
+const openSpan      = document.querySelector("#stat-open");
+const doneSpan      = document.querySelector("#stat-done");
 
-// ----- Helpers -----
-function showError(message) {
-  if (!errorBox) return;
-  errorBox.textContent = message;
-  errorBox.style.display = "block";
+const reloadBtn     = document.querySelector("#reload-btn");
+const loadingDiv    = document.querySelector("#loading");
+const tasksList     = document.querySelector("#tasks-list");
+const emptyState    = document.querySelector("#empty-state");
+const listError     = document.querySelector("#list-error");
+
+// Helper
+function apiUrl(path) {
+  return `${API_BASE_URL}${path}`;
 }
 
-function clearError() {
-  if (!errorBox) return;
-  errorBox.textContent = "";
-  errorBox.style.display = "none";
-}
-
-// ----- API calls -----
-async function fetchTasks() {
-  clearError();
-  if (tasksContainer) {
-    tasksContainer.innerHTML = "<p class='muted'>Loading...</p>";
-  }
-
-  try {
-    const res = await fetch(`${API_BASE_URL}${TASKS_ENDPOINT}`);
-    if (!res.ok) {
-      throw new Error(res.statusText || `HTTP ${res.status}`);
-    }
-    const tasks = await res.json();
-    renderTasks(tasks);
-  } catch (err) {
-    if (tasksContainer) tasksContainer.innerHTML = "";
-    showError(`Failed to load tasks: ${err.message}`);
-  }
-}
-
+// ========= RENDER =========
 function renderTasks(tasks) {
-  if (!tasksContainer) return;
-  tasksContainer.innerHTML = "";
+
+  if (loadingDiv) {
+    loadingDiv.classList.add("hidden");
+  }
+  if (listError) {
+    listError.classList.add("hidden");
+  }
+
+  tasksList.innerHTML = "";
 
   if (!tasks || tasks.length === 0) {
-    tasksContainer.innerHTML =
-      "<p class='muted'>No tasks yet. Add something!</p>";
+    // لا يوجد مهام
+    emptyState.classList.remove("hidden");
+    totalSpan.textContent = "0";
+    openSpan.textContent = "0";
+    doneSpan.textContent = "0";
+    return;
   }
 
-  const total = tasks.length;
-  // Backend uses "is_done" instead of "done"
-  const done = tasks.filter((t) => t.is_done).length;
-  const open = total - done;
+  emptyState.classList.add("hidden");
 
-  if (totalSpan) totalSpan.textContent = total;
-  if (openSpan) openSpan.textContent = open;
-  if (doneSpan) doneSpan.textContent = done;
+  let openCount = 0;
+  let doneCount = 0;
 
-  for (const task of tasks) {
-    const row = document.createElement("div");
-    row.className =
-      "task-row" + (task.is_done ? " task-row--done" : "");
+  tasks.forEach((task) => {
+    const li = document.createElement("li");
+    li.className = "task-item";
 
-    const text = document.createElement("span");
-    // Backend returns "title" instead of "description"
-    text.textContent = task.title || "(no title)";
+    const titleSpan = document.createElement("span");
+    titleSpan.className = "task-title";
+    titleSpan.textContent = task.title ?? "(no title)";
 
-    const actions = document.createElement("div");
-    actions.className = "task-actions";
+    const statusSpan = document.createElement("span");
+    const isDone =
+      task.is_done === true ||
+      task.is_done === 1 ||
+      task.completed === true;
 
-    const toggleBtn = document.createElement("button");
-    toggleBtn.className =
-      "btn btn-small" + (task.is_done ? " btn-secondary" : " btn-primary");
-    toggleBtn.textContent = task.is_done ? "Re-open" : "Done";
-    toggleBtn.onclick = () => toggleTask(task);
+    statusSpan.textContent = isDone ? "Done" : "Open";
+    statusSpan.className = isDone ? "badge badge--done" : "badge badge--open";
 
-    const deleteBtn = document.createElement("button");
-    deleteBtn.className = "btn btn-small btn-danger";
-    deleteBtn.textContent = "Delete";
-    deleteBtn.onclick = () => deleteTask(task);
+    li.appendChild(titleSpan);
+    li.appendChild(statusSpan);
+    tasksList.appendChild(li);
 
-    actions.appendChild(toggleBtn);
-    actions.appendChild(deleteBtn);
-
-    row.appendChild(text);
-    row.appendChild(actions);
-    tasksContainer.appendChild(row);
-  }
-}
-
-async function addTask() {
-  clearError();
-  const description = input && input.value ? input.value.trim() : "";
-  if (!description) return;
-
-  if (addButton) addButton.disabled = true;
-
-  try {
-    const res = await fetch(`${API_BASE_URL}${TASKS_ENDPOINT}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      // Backend expects "title" (and uses "is_done" field in response)
-      body: JSON.stringify({ title: description, is_done: false }),
-    });
-    if (!res.ok) {
-      throw new Error(res.statusText || `HTTP ${res.status}`);
+    if (isDone) {
+      doneCount += 1;
+    } else {
+      openCount += 1;
     }
-    if (input) input.value = "";
-    await fetchTasks();
-  } catch (err) {
-    showError(`Failed to add task: ${err.message}`);
-  } finally {
-    if (addButton) addButton.disabled = false;
-  }
-}
-
-async function toggleTask(task) {
-  clearError();
-  try {
-    const res = await fetch(`${API_BASE_URL}${TASKS_ENDPOINT}/${task.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      // Backend uses "is_done" instead of "done"
-      body: JSON.stringify({ is_done: !task.is_done }),
-    });
-    if (!res.ok) {
-      throw new Error(res.statusText || `HTTP ${res.status}`);
-    }
-    await fetchTasks();
-  } catch (err) {
-    showError(`Failed to update task: ${err.message}`);
-  }
-}
-
-async function deleteTask(task) {
-  clearError();
-  try {
-    const res = await fetch(`${API_BASE_URL}${TASKS_ENDPOINT}/${task.id}`, {
-      method: "DELETE",
-    });
-    if (!res.ok && res.status !== 204) {
-      throw new Error(res.statusText || `HTTP ${res.status}`);
-    }
-    await fetchTasks();
-  } catch (err) {
-    showError(`Failed to delete task: ${err.message}`);
-  }
-}
-
-// ----- Events -----
-if (addButton) addButton.addEventListener("click", addTask);
-if (refreshButton) refreshButton.addEventListener("click", fetchTasks);
-if (input) {
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") addTask();
   });
+
+  totalSpan.textContent = String(tasks.length);
+  openSpan.textContent = String(openCount);
+  doneSpan.textContent = String(doneCount);
 }
 
-// Initial load
-fetchTasks();
+// ========= API CALLS =========
+async function fetchTasks() {
+  try {
+    if (loadingDiv) {
+      loadingDiv.classList.remove("hidden");
+      loadingDiv.textContent = "Loading tasks…";
+    }
+    if (listError) {
+      listError.classList.add("hidden");
+    }
+
+    const res = await fetch(apiUrl(TASKS_ENDPOINT), {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    });
+
+    if (!res.ok) {
+      console.error("Failed to fetch tasks:", res.status, res.statusText);
+      if (listError) {
+        listError.textContent = "Failed to load tasks.";
+        listError.classList.remove("hidden");
+      }
+      return;
+    }
+
+    const data = await res.json();
+    console.log("Tasks from API:", data);
+    renderTasks(data);
+  } catch (err) {
+    console.error("Error while fetching tasks:", err);
+    if (listError) {
+      listError.textContent = "Error loading tasks.";
+      listError.classList.remove("hidden");
+    }
+  } finally {
+    if (loadingDiv) {
+      loadingDiv.classList.add("hidden");
+    }
+  }
+}
+
+async function addTask(title) {
+  if (!title || title.trim() === "") {
+    if (formError) {
+      formError.textContent = "Please enter a task title.";
+      formError.classList.remove("hidden");
+    }
+    return;
+  }
+
+  if (formError) {
+    formError.classList.add("hidden");
+  }
+
+  try {
+    const res = await fetch(apiUrl(TASKS_ENDPOINT), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ title: title.trim() }),
+    });
+
+    if (!res.ok) {
+      console.error("Failed to add task:", res.status, res.statusText);
+      if (formError) {
+        formError.textContent = "Failed to add task. Try again.";
+        formError.classList.remove("hidden");
+      }
+      return;
+    }
+
+    const created = await res.json();
+    console.log("Created task:", created);
+
+    newTaskInput.value = "";
+    await fetchTasks();
+  } catch (err) {
+    console.error("Error while adding task:", err);
+    if (formError) {
+      formError.textContent = "Error while adding task.";
+      formError.classList.remove("hidden");
+    }
+  }
+}
+
+// ========= INIT / EVENTS =========
+document.addEventListener("DOMContentLoaded", () => {
+  fetchTasks();
+
+  if (newTaskForm) {
+    newTaskForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      addTask(newTaskInput.value);
+    });
+  }
+
+  if (reloadBtn) {
+    reloadBtn.addEventListener("click", () => {
+      fetchTasks();
+    });
+  }
+});
